@@ -1,0 +1,6 @@
+name: "AntiQueue"
+description: "Did you ever get stuck in queue? Well it wont happen again with this plugin"
+authors:
+  - "IronException"
+version: "1.0"
+mainClass: "Main"
