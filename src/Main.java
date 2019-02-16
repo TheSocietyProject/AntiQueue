@@ -1,9 +1,9 @@
 
 import com.sasha.eventsys.SimpleEventHandler;
 import com.sasha.eventsys.SimpleListener;
+import com.sasha.reminecraft.Configuration;
 import com.sasha.reminecraft.api.RePlugin;
 import com.sasha.reminecraft.api.event.ChatReceivedEvent;
-import com.sasha.reminecraft.client.ReClient;
 import com.sasha.reminecraft.logging.ILogger;
 import com.sasha.reminecraft.logging.LoggerBuilder;
 
@@ -16,14 +16,15 @@ public class Main extends RePlugin implements SimpleListener {
 
 private boolean inQueue = true;
 
-    public final int acceptedMsgTime = 3 * 60 * 1000; // 3 mins
+
+    private Config CFG = new Config();
 
 
     private long lastMsg;
 
     public ILogger logger = LoggerBuilder.buildProperLogger("AniQueueLoggerPlugin");
 
-    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
 
     @Override
@@ -34,15 +35,14 @@ private boolean inQueue = true;
     @Override
     public void onPluginEnable() {
         ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(() -> {
-            if (ReClient.ReClientCache.INSTANCE.playerListEntries.size() != 0) {
-                if(inQueue)
-                    testQueueTimeOut();
-            }
-        }, 5L, 60L, TimeUnit.SECONDS);
+            if(inQueue)
+                testQueueTimeOut();
+
+        }, 1L, 5L, TimeUnit.SECONDS);
     }
 
 
-    public void testQueueTimeOut(){
+    public synchronized void testQueueTimeOut(){
         if(queueTimeOut())
             timeOutAction(); // extra method so when the null msg comes its also reconnecting
 
@@ -59,15 +59,18 @@ private boolean inQueue = true;
 
         long now = System.currentTimeMillis();
 
-        return now - lastMsg > acceptedMsgTime;
+        return now - lastMsg > CFG.var_acceptedWaitTime;
     }
 
+    
+
     public void timeOutAction(){
-        logger.log("AntiQueue detected a need to reconnect");
+        logger.log("AntiQueue: reconnecting now");
 
         reconnect();
 
     }
+
 
 
 
@@ -112,7 +115,7 @@ private boolean inQueue = true;
 
     @Override
     public void onPluginDisable() {
-
+        this.getReMinecraft().EVENT_BUS.deregisterListener(this);
     }
 
     @Override
@@ -129,4 +132,20 @@ private boolean inQueue = true;
     public void registerConfig() {
 
     }
+}
+
+class Config extends Configuration {
+    @ConfigSetting
+    public int var_acceptedWaitTime; // 0 does nothing, 1 removes it completely, 2 points to the msg that is repeated
+
+
+
+    public Config() {
+        super("AntiQueue");
+
+        this.var_acceptedWaitTime = 60 * 1000; // 1 minute
+    }
+
+
+
 }
