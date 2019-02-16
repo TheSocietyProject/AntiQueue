@@ -62,12 +62,15 @@ private boolean inQueue = true;
         return now - lastMsg > CFG.var_acceptedWaitTime;
     }
 
+    
+
     public void timeOutAction(){
         logger.log("AntiQueue: reconnecting now");
 
         reconnect();
 
     }
+
 
 
 
