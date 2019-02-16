@@ -1,24 +1,12 @@
-import com.github.steveice10.mc.protocol.data.message.ChatColor;
-import com.github.steveice10.mc.protocol.data.message.Message;
-import com.github.steveice10.mc.protocol.data.message.MessageStyle;
-import com.github.steveice10.mc.protocol.packet.ingame.server.ServerChatPacket;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+
 import com.sasha.eventsys.SimpleEventHandler;
 import com.sasha.eventsys.SimpleListener;
-import com.sasha.reminecraft.ReMinecraft;
 import com.sasha.reminecraft.api.RePlugin;
 import com.sasha.reminecraft.api.event.ChatReceivedEvent;
-import com.sasha.reminecraft.client.ChildReClient;
 import com.sasha.reminecraft.client.ReClient;
 import com.sasha.reminecraft.logging.ILogger;
 import com.sasha.reminecraft.logging.LoggerBuilder;
 
-import javax.swing.event.ChangeListener;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.Style;
-import java.util.Enumeration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -28,7 +16,7 @@ public class Main extends RePlugin implements SimpleListener {
 
 private boolean inQueue = true;
 
-    public final int acceptedMsgTime = 5 * 60 * 1000; // 5 mins
+    public final int acceptedMsgTime = 3 * 60 * 1000; // 3 mins
 
 
     private long lastMsg;
@@ -68,11 +56,15 @@ private boolean inQueue = true;
 
          */
 
+
         long now = System.currentTimeMillis();
-        return now - lastMsg > acceptedMsgTime && !inQueue;
+
+        return now - lastMsg > acceptedMsgTime;
     }
 
     public void timeOutAction(){
+        logger.log("AntiQueue detected a need to reconnect");
+
         reconnect();
 
     }
@@ -94,13 +86,13 @@ private boolean inQueue = true;
     }
 
     private boolean testWetherInQueue(String msg) {
-        if (msg.startsWith("<")) {
+        if (msg.startsWith("<"))
             return inQueue = false;
-        }
 
-        if (msg.startsWith("2b2t is full")) {
+
+        if (msg.startsWith("2b2t is full"))
             return inQueue = true;
-        }
+
 
         if(msg.equals("Position in queue: 0"))
             timeOutAction(); // still sets true cuz starts with Pos in queue
@@ -109,7 +101,7 @@ private boolean inQueue = true;
             return inQueue = true;
 
 
-        if(msg.equals("Exception Connecting:ReadTimeoutException : null")){ // TODO
+        if(msg.equals("Exception Connecting:ReadTimeoutException : null")){
             timeOutAction();
             return inQueue = true;
         }
