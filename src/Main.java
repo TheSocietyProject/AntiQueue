@@ -1,8 +1,9 @@
+
 import com.sasha.eventsys.SimpleEventHandler;
 import com.sasha.eventsys.SimpleListener;
+import com.sasha.reminecraft.Configuration;
 import com.sasha.reminecraft.api.RePlugin;
 import com.sasha.reminecraft.api.event.ChatReceivedEvent;
-import com.sasha.reminecraft.client.ReClient;
 import com.sasha.reminecraft.logging.ILogger;
 import com.sasha.reminecraft.logging.LoggerBuilder;
 
@@ -15,14 +16,15 @@ public class Main extends RePlugin implements SimpleListener {
 
 private boolean inQueue = true;
 
-    public final int acceptedMsgTime = 5 * 60 * 1000; // 5 mins
+
+    private Config CFG = new Config();
 
 
     private long lastMsg;
 
     public ILogger logger = LoggerBuilder.buildProperLogger("AniQueueLoggerPlugin");
 
-    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
 
     @Override
@@ -33,43 +35,46 @@ private boolean inQueue = true;
     @Override
     public void onPluginEnable() {
         ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(() -> {
-            if (ReClient.ReClientCache.INSTANCE.playerListEntries.size() != 0) {
-                if(inQueue)
-                    testQueueTimeOut();
-            }
-        }, 5L, 60L, TimeUnit.SECONDS);
+            if(inQueue)
+                testQueueTimeOut();
+
+        }, 1L, 5L, TimeUnit.SECONDS);
     }
 
 
-    public void testQueueTimeOut(){
+    public synchronized void testQueueTimeOut(){
         if(queueTimeOut())
             timeOutAction(); // extra method so when the null msg comes its also reconnecting
-
-    }
-
-    public void timeOutAction(){
-        reconnect(2000);
 
     }
 
     public boolean queueTimeOut(){
         /*
             the other time outs r in testWetherInQueue:
-                Position in queue: 0
-                Null time out sth... // TODO
+                - Position in queue: 0
+                - Exception Connecting:ReadTimeoutException : null
 
          */
 
+
         long now = System.currentTimeMillis();
 
-        return now - lastMsg > acceptedMsgTime && !inQueue;
+        return now - lastMsg > CFG.var_acceptedWaitTime;
+    }
+
+    public void timeOutAction(){
+        logger.log("AntiQueue: reconnecting now");
+
+        reconnect();
+
     }
 
 
-    public void reconnect(int millis){
-        // TODO test wether this works + add sleep(millis)
-        this.getReMinecraft().reLaunch();
 
+
+    public void reconnect(){
+        // TODO search for a better way! also with millis to wait
+        this.getReMinecraft().reLaunch();
     }
 
 
@@ -81,13 +86,13 @@ private boolean inQueue = true;
     }
 
     private boolean testWetherInQueue(String msg) {
-        if (msg.startsWith("<")) {
+        if (msg.startsWith("<"))
             return inQueue = false;
-        }
 
-        if (msg.startsWith("2b2t is full")) {
+
+        if (msg.startsWith("2b2t is full"))
             return inQueue = true;
-        }
+
 
         if(msg.equals("Position in queue: 0"))
             timeOutAction(); // still sets true cuz starts with Pos in queue
@@ -96,7 +101,7 @@ private boolean inQueue = true;
             return inQueue = true;
 
 
-        if(msg.equals("Null sth ")){ // TODO
+        if(msg.equals("Exception Connecting:ReadTimeoutException : null")){
             timeOutAction();
             return inQueue = true;
         }
@@ -107,7 +112,7 @@ private boolean inQueue = true;
 
     @Override
     public void onPluginDisable() {
-
+        this.getReMinecraft().EVENT_BUS.deregisterListener(this);
     }
 
     @Override
@@ -124,4 +129,20 @@ private boolean inQueue = true;
     public void registerConfig() {
 
     }
+}
+
+class Config extends Configuration {
+    @ConfigSetting
+    public int var_acceptedWaitTime; // 0 does nothing, 1 removes it completely, 2 points to the msg that is repeated
+
+
+
+    public Config() {
+        super("AntiQueue");
+
+        this.var_acceptedWaitTime = 60 * 1000; // 1 minute
+    }
+
+
+
 }
