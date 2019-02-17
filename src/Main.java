@@ -14,15 +14,18 @@ import java.util.concurrent.TimeUnit;
 
 public class Main extends RePlugin implements SimpleListener {
 
-private boolean inQueue = true;
+    private boolean inQueue = true;
+    private boolean connecting = false;
 
 
     private Config CFG = new Config();
 
 
     private long lastMsg;
+    private boolean lastMsgValid = false;
 
-    public ILogger logger = LoggerBuilder.buildProperLogger("AniQueueLoggerPlugin");
+
+    public ILogger logger = LoggerBuilder.buildProperLogger("AniQueue");
 
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
@@ -35,7 +38,7 @@ private boolean inQueue = true;
     @Override
     public void onPluginEnable() {
         ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(() -> {
-            if(inQueue)
+            if(inQueue && !connecting)
                 testQueueTimeOut();
 
         }, 1L, 5L, TimeUnit.SECONDS);
@@ -56,16 +59,16 @@ private boolean inQueue = true;
 
          */
 
+        if(!lastMsgValid)
+            return false;
 
         long now = System.currentTimeMillis();
 
         return now - lastMsg > CFG.var_acceptedWaitTime;
     }
 
-    
-
     public void timeOutAction(){
-        logger.log("AntiQueue: reconnecting now");
+        logger.log("AntiQueue decided to RECONNECT now because last queue msg is " + (System.currentTimeMillis() - lastMsg) + " away.");
 
         reconnect();
 
@@ -74,21 +77,22 @@ private boolean inQueue = true;
 
 
 
-
     public void reconnect(){
-        // TODO search for a better way! also with millis to wait
-        this.getReMinecraft().reLaunch();
+        ReconnectManager.reconnect();
     }
 
 
     @SimpleEventHandler
     public void onEvent(ChatReceivedEvent e){
         lastMsg = e.getTimeRecieved();
+        lastMsgValid = true;
         testWetherInQueue(e.getMessageText());
 
     }
 
     private boolean testWetherInQueue(String msg) {
+        connecting = false;
+
         if (msg.startsWith("<"))
             return inQueue = false;
 
@@ -96,6 +100,8 @@ private boolean inQueue = true;
         if (msg.startsWith("2b2t is full"))
             return inQueue = true;
 
+        if(msg.equals("Connecting to the server..."))
+            connecting = true;
 
         if(msg.equals("Position in queue: 0"))
             timeOutAction(); // still sets true cuz starts with Pos in queue
@@ -103,7 +109,9 @@ private boolean inQueue = true;
         if (msg.startsWith("Position in queue: "))
             return inQueue = true;
 
-
+        logger.log("msg is: \"" + msg + "\"");
+        logger.log("is ==?  \"Exception Connecting:ReadTimeoutException : null\"");
+        //             Exception Connecting:ReadTimeoutException : null
         if(msg.equals("Exception Connecting:ReadTimeoutException : null")){
             timeOutAction();
             return inQueue = true;
@@ -116,11 +124,13 @@ private boolean inQueue = true;
     @Override
     public void onPluginDisable() {
         this.getReMinecraft().EVENT_BUS.deregisterListener(this);
+        lastMsgValid = false;
+
     }
 
     @Override
     public void onPluginShutdown() {
-
+        lastMsgValid = false;
     }
 
     @Override
@@ -130,7 +140,7 @@ private boolean inQueue = true;
 
     @Override
     public void registerConfig() {
-
+        this.getReMinecraft().configurations.add(CFG);
     }
 }
 
