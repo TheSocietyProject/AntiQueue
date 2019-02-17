@@ -25,7 +25,7 @@ public class Main extends RePlugin implements SimpleListener {
     private boolean lastMsgValid = false;
 
 
-    public ILogger logger = LoggerBuilder.buildProperLogger("AniQueue");
+    public ILogger logger = LoggerBuilder.buildProperLogger("AntiQueue");
 
     private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
@@ -117,19 +117,26 @@ public class Main extends RePlugin implements SimpleListener {
             return inQueue = true;
         }
 
+        if(msg.equals("Lost connection to server")){
+            timeOutAction();
+            return inQueue = true;
+        }
+
+
         return inQueue;
     }
 
 
     @Override
     public void onPluginDisable() {
-        this.getReMinecraft().EVENT_BUS.deregisterListener(this);
+
         lastMsgValid = false;
 
     }
 
     @Override
     public void onPluginShutdown() {
+        this.getReMinecraft().EVENT_BUS.deregisterListener(this);
         lastMsgValid = false;
     }
 
