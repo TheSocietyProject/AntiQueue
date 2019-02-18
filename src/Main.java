@@ -68,7 +68,7 @@ public class Main extends RePlugin implements SimpleListener {
     }
 
     public void timeOutAction(){
-        logger.log("AntiQueue decided to RECONNECT now because last queue msg is " + (System.currentTimeMillis() - lastMsg) + " away.");
+        logger.log("AntiQueue decided to RECONNECT now. Last queue msg is " + (System.currentTimeMillis() - lastMsg) + " away.");
 
         reconnect();
 
@@ -109,8 +109,6 @@ public class Main extends RePlugin implements SimpleListener {
         if (msg.startsWith("Position in queue: "))
             return inQueue = true;
 
-        logger.log("msg is: \"" + msg + "\"");
-        logger.log("is ==?  \"Exception Connecting:ReadTimeoutException : null\"");
         //             Exception Connecting:ReadTimeoutException : null
         if(msg.equals("Exception Connecting:ReadTimeoutException : null")){
             timeOutAction();
