@@ -27,7 +27,7 @@ public class Main extends RePlugin implements SimpleListener {
 
     public ILogger logger = LoggerBuilder.buildProperLogger("AntiQueue");
 
-    private ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService executor;
 
 
     @Override
@@ -37,6 +37,7 @@ public class Main extends RePlugin implements SimpleListener {
 
     @Override
     public void onPluginEnable() {
+        executor = Executors.newScheduledThreadPool(2);
         ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(() -> {
             if(inQueue && !connecting)
                 testQueueTimeOut();
@@ -127,7 +128,7 @@ public class Main extends RePlugin implements SimpleListener {
 
     @Override
     public void onPluginDisable() {
-
+        executor.shutdownNow();
         lastMsgValid = false;
 
     }
